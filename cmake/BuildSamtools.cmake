@@ -24,22 +24,44 @@ if (NOT ZLIB_FOUND)
     )
 endif (NOT ZLIB_FOUND)
 
+find_package(HTSlib)
+if (NOT htslib_FOUND)
+    set(HTLSIB_ROOT ${CMAKE_BINARY_DIR}/vendor/htslib)
+    set(HTSLIB_SRC ${CMAKE_BINARY_DIR}/vendor/htslib-src)
+    set(HTSLIB_INCLUDE_DIRS ${HTSLIB_ROOT}/include)
+    set(HTSLIB_LIBRARIES ${HTSLIB_ROOT}/${CMAKE_FIND_LIBRARY_PREFIXES}hts${CMAKE_STATIC_LIBRARY})
+    ExternalDependency_Add(
+        htslib
+        BUILD_BYPRODUCTS ${HTSLIB_LIBRARIES}
+        ARGS
+            URL ${CMAKE_SOURCE_DIR}/vendor/htslib-1.9.tar.bz2
+            SOURCE_DIR ${HTSLIB_SRC}
+            BINARY_DIR ${HTSLIB_SRC}
+            CONFIGURE_COMMAND ./configure
+            BUILD_COMMAND make
+    )
+endif (NOT htslib_FOUND)
+
 ExternalDependency_Add(
     samtools-lib
     BUILD_BYPRODUCTS ${SAMTOOLS_LIB} ${SAMTOOLS_BIN}
     ARGS
-        URL ${CMAKE_SOURCE_DIR}/vendor/samtools-0.1.19.tar.gz
+        URL ${CMAKE_SOURCE_DIR}/vendor/samtools-1.9.tar.bz2
         SOURCE_DIR ${SAMTOOLS_ROOT}
         BINARY_DIR ${SAMTOOLS_ROOT}
-        PATCH_COMMAND patch -p2 -t -N < ${CMAKE_SOURCE_DIR}/vendor/samtools0.1.19.patch
+        #PATCH_COMMAND patch -p2 -t -N < ${CMAKE_SOURCE_DIR}/vendor/samtools0.1.19.patch
         CONFIGURE_COMMAND echo "Building samtools, build log at ${SAMTOOLS_LOG}"
         BUILD_COMMAND make INCLUDES=-I${ZLIB_INCLUDE_DIRS} libbam.a > ${SAMTOOLS_LOG} 2>&1
         INSTALL_COMMAND "true"
 )
 
-set(Samtools_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS};${SAMTOOLS_ROOT})
-set(Samtools_LIBRARIES ${SAMTOOLS_LIB} m ${ZLIB_LIBRARIES})
+set(Samtools_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS} ${HTSLIB_INCLUDE_DIRS};${SAMTOOLS_ROOT})
+set(Samtools_LIBRARIES ${SAMTOOLS_LIB} ${ZLIB_LIBRARIES} ${HTSLIB_LIBRARIES})
 
 if (NOT ZLIB_FOUND)
     add_dependencies(samtools-lib zlib)
 endif (NOT ZLIB_FOUND)
+
+if (NOT htslib_FOUND)
+    add_dependencies(samtools-lib htslib)
+endif (NOT htslib_FOUND)
